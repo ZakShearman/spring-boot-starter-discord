@@ -2,7 +2,7 @@ plugins {
     java
     `maven-publish`
 
-    id("io.freefair.lombok") version "6.4.2"
+    id("io.freefair.lombok") version "6.4.3"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
 }
 
