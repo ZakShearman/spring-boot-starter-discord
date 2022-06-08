@@ -1,5 +1,6 @@
 package pink.zak.discord.utils.time;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -10,6 +11,10 @@ public class Time {
 
     public static String formatAsDateTime(long time) {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneOffset.UTC).format(Time.DATE_FORMAT);
+    }
+
+    public static String format(Duration duration) {
+        return format(duration.toMillis());
     }
 
     public static String format(long millis) {

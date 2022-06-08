@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 
 public class DiscordCommandBackend implements SlashCommandListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(DiscordCommandBackend.class);
-    private static final Path BASE_PATH = Path.of("");
+    private static final Path DATA_PATH = Path.of("command-data.json");
 
     private final @NotNull JDA jda;
     private final ExecutorService executor = ForkJoinPool.commonPool();
@@ -69,7 +69,7 @@ public class DiscordCommandBackend implements SlashCommandListener {
 
     public void init(@Nullable Guild guild) {
         // load existing commands so we don't have to update every time
-        Set<SlashCommandFileHandler.SlashCommandInfo> loadedCommands = SlashCommandFileHandler.loadSlashCommands(BASE_PATH);
+        Set<SlashCommandFileHandler.SlashCommandInfo> loadedCommands = SlashCommandFileHandler.loadSlashCommands(DATA_PATH);
 
         if (loadedCommands == null) {
             List<Command> createdCommands = this.createNewCommands(guild);
@@ -80,7 +80,7 @@ public class DiscordCommandBackend implements SlashCommandListener {
                 LOGGER.info("Bound created command {} to ID {}", matchedCommand.name(), command.getIdLong());
             });
 
-            SlashCommandFileHandler.saveSlashCommands(BASE_PATH, createdCommands);
+            SlashCommandFileHandler.saveSlashCommands(DATA_PATH, createdCommands);
         } else {
             LOGGER.info("Loaded Commands {}", loadedCommands);
             for (SlashCommandFileHandler.SlashCommandInfo commandInfo : loadedCommands) {

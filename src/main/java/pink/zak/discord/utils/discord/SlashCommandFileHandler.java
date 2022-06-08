@@ -27,8 +27,7 @@ public class SlashCommandFileHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(SlashCommandFileHandler.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    public static Set<SlashCommandInfo> loadSlashCommands(Path basePath) {
-        Path path = basePath.resolve("command-data.json");
+    public static Set<SlashCommandInfo> loadSlashCommands(Path path) {
         FileReader reader;
         try {
             reader = new FileReader(path.toFile());
@@ -45,8 +44,7 @@ public class SlashCommandFileHandler {
         return commands;
     }
 
-    public static void saveSlashCommands(Path basePath, Collection<Command> commands) {
-        Path path = basePath.resolve("command-data.json");
+    public static void saveSlashCommands(Path path, Collection<Command> commands) {
         if (!Files.exists(path)) {
             try {
                 boolean created = path.toFile().createNewFile();
