@@ -20,6 +20,11 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-data-jpa:2.6.7")
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
