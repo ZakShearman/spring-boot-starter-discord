@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import pink.zak.discord.utils.discord.annotations.BotCommandComponent;
 import pink.zak.discord.utils.discord.annotations.BotSubCommandComponent;
 import pink.zak.discord.utils.discord.command.BotCommand;
@@ -18,7 +19,6 @@ import pink.zak.discord.utils.discord.command.BotSubCommand;
 import pink.zak.discord.utils.discord.command.RestrictableCommand;
 import pink.zak.discord.utils.discord.command.data.BotCommandData;
 import pink.zak.discord.utils.discord.command.data.BotSubCommandData;
-import pink.zak.discord.utils.listener.SlashCommandListener;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -31,7 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
-public class DiscordCommandBackend implements SlashCommandListener {
+public class DiscordCommandBackend {
     private static final Logger LOGGER = LoggerFactory.getLogger(DiscordCommandBackend.class);
     private static final Path DATA_PATH = Path.of("command-data.json");
 
@@ -127,7 +127,7 @@ public class DiscordCommandBackend implements SlashCommandListener {
         return createdCommands;
     }
 
-    @Override
+    @EventListener(SlashCommandInteractionEvent.class)
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         Member sender = event.getMember();
         CompletableFuture.runAsync(() -> {

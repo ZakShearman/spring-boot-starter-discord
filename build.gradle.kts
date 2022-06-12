@@ -31,8 +31,8 @@ tasks.getByName<Test>("test") {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            groupId = "pink.zak.discord"
+        create<MavenPublication>("maven") { // Only used for local publishing so same as JitPack
+            groupId = "com.github.ZakShearman"
             artifactId = "spring-boot-starter-discord"
             version = "1.0"
 

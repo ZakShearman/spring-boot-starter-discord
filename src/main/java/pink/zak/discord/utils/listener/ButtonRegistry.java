@@ -1,9 +1,9 @@
 package pink.zak.discord.utils.listener;
 
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -12,10 +12,10 @@ import java.util.function.Consumer;
 
 // todo this is not currently implemented
 @Component
-public class ButtonRegistry extends ListenerAdapter {
+public class ButtonRegistry {
     private final Map<String, Consumer<ButtonInteractionEvent>> buttonMap = new ConcurrentHashMap<>();
 
-    @Override
+    @EventListener(ButtonInteractionEvent.class)
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         Consumer<ButtonInteractionEvent> consumer = this.buttonMap.get(event.getComponentId());
         if (consumer != null)

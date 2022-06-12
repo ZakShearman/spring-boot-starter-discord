@@ -1,0 +1,5 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  pink.zak.discord.utils.autoconfig.JdaAutoConfiguration,\
+  pink.zak.discord.utils.autoconfig.DiscordCommandAutoConfiguration,\
+  pink.zak.discord.utils.autoconfig.JdaEventPublisherAutoConfiguration,\
+  pink.zak.discord.utils.autoconfig.ListenerAdapterAutoConfiguration
