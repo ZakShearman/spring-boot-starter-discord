@@ -1,6 +1,5 @@
 package pink.zak.discord.utils.message;
 
-import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -10,50 +9,48 @@ import org.springframework.stereotype.Component;
 import pink.zak.discord.utils.BotConstants;
 import pink.zak.discord.utils.listener.ButtonRegistry;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Component
-@RequiredArgsConstructor
 public abstract class PageableButtonEmbedMenu extends PageableMenu {
-    private final ButtonRegistry buttonRegistry;
     private final ScheduledExecutorService scheduler;
-
-    private final Map<Integer, MessageEmbed> cachedPages = new ConcurrentHashMap<>();
+    private final ButtonRegistry buttonRegistry;
 
     private ScheduledFuture<?> scheduledFuture;
 
     private Button forwardButton;
     private Button backButton;
 
+    protected PageableButtonEmbedMenu(ScheduledExecutorService scheduler, ButtonRegistry buttonRegistry) {
+        this.scheduler = scheduler;
+        this.buttonRegistry = buttonRegistry;
+    }
+
     public void sendInitialMessage(SlashCommandInteractionEvent event, boolean ephemeral) {
         MessageEmbed embed = this.createPage(super.currentPage.get());
-        this.cachedPages.put(super.currentPage.get(), embed);
 
         if (super.maxPage > 1) {
-            this.backButton = Button.primary(UUID.randomUUID().toString(), BotConstants.BACK_EMOJI);
+            this.backButton = Button.primary(UUID.randomUUID().toString(), BotConstants.BACK_EMOJI).asDisabled();
             this.forwardButton = Button.primary(UUID.randomUUID().toString(), BotConstants.FORWARD_EMOJI);
 
             this.buttonRegistry.registerButton(this.backButton, this::previousPage)
-                .registerButton(this.forwardButton, this::nextPage);
+                    .registerButton(this.forwardButton, this::nextPage);
         }
 
         ReplyCallbackAction replyAction = event.replyEmbeds(embed)
-            .setEphemeral(ephemeral);
+                .setEphemeral(ephemeral);
 
-        if (this.forwardButton != null)
-            replyAction.addActionRow(this.forwardButton);
+        if (this.forwardButton != null) {
+            replyAction.addActionRow(this.backButton, this.forwardButton);
+        }
 
-        replyAction.queue(sentMessage -> {
-            if (super.maxPage > 1)
-                this.scheduleDeletion();
-        });
+        if (super.maxPage > 1)
+            this.scheduleDeletion();
+
+        replyAction.queue();
     }
 
     public abstract MessageEmbed createPage(int page);
@@ -78,15 +75,13 @@ public abstract class PageableButtonEmbedMenu extends PageableMenu {
         if (page > this.maxPage) {
             return;
         }
-        MessageEmbed embed = this.cachedPages.computeIfAbsent(page, this::createPage);
+        MessageEmbed embed = this.createPage(page);
 
-        Set<Button> buttons = new HashSet<>();
-        if (page < this.maxPage)
-            buttons.add(this.forwardButton);
-        if (page > 1)
-            buttons.add(this.backButton);
+        if (this.maxPage > 1) this.updateButtonStates(page);
+
         event.editMessageEmbeds(embed)
-            .setActionRow(buttons).queue();
+                .setActionRow(this.backButton, this.forwardButton)
+                .queue();
     }
 
     @Override
@@ -99,5 +94,18 @@ public abstract class PageableButtonEmbedMenu extends PageableMenu {
             this.scheduledFuture.cancel(false);
         }
         this.scheduledFuture = this.scheduler.schedule(() -> this.buttonRegistry.unregisterButtons(this.forwardButton, this.backButton), 1, TimeUnit.MINUTES);
+    }
+
+    private void updateButtonStates(int page) {
+        if (page == 1) { // If page is 1, lock back button, unlock other
+            if (!this.backButton.isDisabled()) this.backButton = this.backButton.asDisabled();
+            if (this.forwardButton.isDisabled()) this.forwardButton = this.forwardButton.asEnabled();
+        } else if (page >= this.maxPage) { // If page is max, lock forward button, unlock other
+            if (!this.forwardButton.isDisabled()) this.forwardButton = this.forwardButton.asDisabled();
+            if (this.backButton.isDisabled()) this.backButton = this.backButton.asEnabled();
+        } else { // Unlock both buttons
+            if (this.forwardButton.isDisabled()) this.forwardButton = this.forwardButton.asEnabled();
+            if (this.backButton.isDisabled()) this.backButton = this.backButton.asEnabled();
+        }
     }
 }
