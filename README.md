@@ -1,10 +1,12 @@
 ## Zak's Spring Boot Starter Discord
 
-This project is here to be nice. It isn't very clean, but it works, and it works well. There are still remnants of my old utils in here
+## Features
 
-Use the annotation `@EnableDiscord` to enable listener registering, command registering, etc...
+  - Automatic JDA instance creation based off your config value (`spring.discord` in your application.yaml)
+  - Integration with Spring's event system, e.g `@EventListener(MessageReceivedEvent.class)`
+  - Slash command system (`@DiscordCommand`, `@DiscordSubCommand`)
 
-Regarding `JDA` instances, you can make your own and register it as a bean, otherwise we will create an instance for you. Check the `JdaConfiguration` class for how this is done.
+This project is in no sense official and only exists since I don't see a use keeping it private. Enjoy :)
 
-Documentation: The documentation is the code, sorry.
-Support: Make an issue/discussion
+Documentation: The documentation is the code or me, sorry.
+Support: Make an issue <3
