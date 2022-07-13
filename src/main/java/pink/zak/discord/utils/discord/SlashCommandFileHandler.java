@@ -69,12 +69,13 @@ public class SlashCommandFileHandler {
     }
 
     // yes, more data can be saved into this but I can't be bothered as it isn't necessary. Most of the stuff here isn't necessary.
+    // also probably a way to do this with JDA
+    // todo this should definitely be done better
     private static JsonObject createCommandObject(Command command) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("name", command.getName());
         jsonObject.addProperty("description", command.getDescription());
         jsonObject.addProperty("id", command.getIdLong());
-        jsonObject.addProperty("default_permission", command.isDefaultEnabled());
         jsonObject.addProperty("application_id", command.getApplicationIdLong());
 
         if (!command.getOptions().isEmpty()) {
