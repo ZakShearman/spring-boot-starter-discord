@@ -16,11 +16,11 @@ import pink.zak.discord.utils.discord.annotations.BotCommandComponent;
 import pink.zak.discord.utils.discord.annotations.BotSubCommandComponent;
 import pink.zak.discord.utils.discord.command.BotCommand;
 import pink.zak.discord.utils.discord.command.BotSubCommand;
-import pink.zak.discord.utils.discord.command.RestrictableCommand;
 import pink.zak.discord.utils.discord.command.data.BotCommandData;
 import pink.zak.discord.utils.discord.command.data.BotSubCommandData;
+import pink.zak.discord.utils.discord.command.data.stored.SlashCommandInfo;
+import pink.zak.discord.utils.discord.command.data.stored.SlashCommandInfoImpl;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -32,17 +32,18 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 public class DiscordCommandBackend {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DiscordCommandBackend.class);
-    private static final Path DATA_PATH = Path.of("command-data.json");
+    private static final @NotNull Logger LOGGER = LoggerFactory.getLogger(DiscordCommandBackend.class);
 
     private final @NotNull JDA jda;
-    private final ExecutorService executor = ForkJoinPool.commonPool();
+    private final @NotNull SlashCommandDetailsService slashCommandDetailsService;
+    private final @NotNull ExecutorService executor = ForkJoinPool.commonPool();
 
-    private final Map<String, BotCommandData> loadedCommands = new HashMap<>();
-    private final Map<Long, BotCommandData> slashCommands = new HashMap<>(); // todo better name? tf is this
+    private final @NotNull Map<String, BotCommandData> commandsByName = new HashMap<>();
+    private final @NotNull Map<Long, BotCommandData> commandsById = new HashMap<>();
 
-    public DiscordCommandBackend(@NotNull ApplicationContext applicationContext, @NotNull JDA jda, @Nullable Guild guild) {
+    public DiscordCommandBackend(@NotNull ApplicationContext applicationContext, @NotNull JDA jda, @Nullable Guild guild, @NotNull SlashCommandDetailsService slashCommandDetailsService) {
         this.jda = jda;
+        this.slashCommandDetailsService = slashCommandDetailsService;
 
         Map<Class<? extends BotCommand>, Set<BotSubCommandData>> subCommandReferences = new HashMap<>();
 
@@ -59,61 +60,47 @@ public class DiscordCommandBackend {
             Map<String, BotSubCommandData> mappedSubCommands = BotCommandData.computeSubCommands(subCommandReferences.getOrDefault(command.getClass(), new HashSet<>()));
 
             BotCommandData commandData = new BotCommandData(command, mappedSubCommands, commandComponent.name(), commandComponent.admin());
-            this.loadedCommands.put(commandData.name(), commandData);
+            this.commandsByName.put(commandData.name(), commandData);
         }
 
-        LOGGER.info("Registered all in-memory commands: {}", this.loadedCommands.values());
+        LOGGER.info("Registered all in-memory commands: {}", this.commandsByName.values());
 
         this.init(guild);
     }
 
     public void init(@Nullable Guild guild) {
         // load existing commands so we don't have to update every time
-        Set<SlashCommandFileHandler.SlashCommandInfo> loadedCommands = SlashCommandFileHandler.loadSlashCommands(DATA_PATH);
+        Set<? extends SlashCommandInfo> loadedCommands = this.slashCommandDetailsService.loadCommands();
 
         if (loadedCommands == null) {
             List<Command> createdCommands = this.createNewCommands(guild);
 
             createdCommands.forEach(command -> {
-                BotCommandData matchedCommand = this.loadedCommands.get(command.getName());
-                this.slashCommands.put(command.getIdLong(), matchedCommand);
+                BotCommandData matchedCommand = this.commandsByName.get(command.getName());
+                this.commandsById.put(command.getIdLong(), matchedCommand);
                 LOGGER.info("Bound created command {} to ID {}", matchedCommand.name(), command.getIdLong());
             });
 
-            SlashCommandFileHandler.saveSlashCommands(DATA_PATH, createdCommands);
+            Set<SlashCommandInfo> simplifiedCommandData = createdCommands.stream()
+                    .map(command -> new SlashCommandInfoImpl(command.getName(), command.getIdLong()))
+                    .collect(Collectors.toUnmodifiableSet());
+
+            this.slashCommandDetailsService.saveCommands(simplifiedCommandData);
         } else {
             LOGGER.info("Loaded Commands {}", loadedCommands);
-            for (SlashCommandFileHandler.SlashCommandInfo commandInfo : loadedCommands) {
-                BotCommandData command = this.loadedCommands.get(commandInfo.name());
-                this.slashCommands.put(commandInfo.id(), command);
-                LOGGER.debug("Bound loaded command {} to ID {}", commandInfo.name(), commandInfo.id());
+            for (SlashCommandInfo commandInfo : loadedCommands) {
+                BotCommandData command = this.commandsByName.get(commandInfo.getName());
+                this.commandsById.put(commandInfo.getId(), command);
+                LOGGER.debug("Bound loaded command {} to ID {}", commandInfo.getName(), commandInfo.getId());
             }
         }
-
-        // permissions - could be improved to only do when necessary but whatever
-//        Map<String, Set<CommandPrivilege>> privileges = new HashMap<>();
-//        for (BotCommand command : this.commands.values()) {
-//            if (!command.isAdmin()) {
-//                for (BotSubCommand genericCommand : command.getSubCommands().values()) {
-//                    if (genericCommand.isAdmin()) {
-//                        privileges.put(command.getCommand().getId(), Set.of(CommandPrivilege.enableUser(240721111174610945L))); // todo especially this in prod needs to be changed
-//                    }
-//                }
-//            } else {
-//                privileges.put(command.getCommand().getId(), Set.of(CommandPrivilege.enableUser(240721111174610945L)));
-//            }
-//        }
-//        if (!privileges.isEmpty())
-//            guild.updateCommandPrivileges(privileges).queue(success -> {
-//                LOGGER.info("Set restricted permissions for " + privileges.size() + " commands");
-//            });
     }
 
-    private List<net.dv8tion.jda.api.interactions.commands.Command> createNewCommands(@Nullable Guild guild) {
-        Set<CommandData> createdData = this.loadedCommands.values()
-            .stream()
-            .map(commandData -> commandData.command().createCommandData())
-            .collect(Collectors.toSet());
+    private List<Command> createNewCommands(@Nullable Guild guild) {
+        Set<CommandData> createdData = this.commandsByName.values()
+                .stream()
+                .map(commandData -> commandData.command().createCommandData())
+                .collect(Collectors.toSet());
         LOGGER.info("Created data {}", createdData);
 
         List<Command> createdCommands;
@@ -128,16 +115,13 @@ public class DiscordCommandBackend {
     }
 
     @EventListener(SlashCommandInteractionEvent.class)
-    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+    public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         Member sender = event.getMember();
         CompletableFuture.runAsync(() -> {
             long commandId = event.getCommandIdLong();
-            BotCommandData command = this.slashCommands.get(commandId);
+            BotCommandData command = this.commandsById.get(commandId);
             if (command == null) {
                 LOGGER.error("Command not found with ID {} and path {}", commandId, event.getCommandPath());
-                return;
-            }
-            if (!this.memberHasAccess(command, event, sender)) {
                 return;
             }
             String subCommandName = event.getSubcommandName();
@@ -155,9 +139,7 @@ public class DiscordCommandBackend {
                 LOGGER.error("SubCommand not found with ID {} and path {}", subCommandName, event.getCommandPath());
                 return;
             }
-            if (this.memberHasAccess(subCommand, event, sender)) {
-                this.executeSlashCommand(subCommand, sender, event);
-            }
+            this.executeSlashCommand(subCommand, sender, event);
         }, this.executor).exceptionally(ex -> {
             LOGGER.error("Error from CommandBase input \"{}\"", event.getCommandString(), ex);
             return null;
@@ -170,13 +152,5 @@ public class DiscordCommandBackend {
 
     private void executeSlashCommand(@NotNull BotSubCommandData commandData, @NotNull Member sender, @NotNull SlashCommandInteractionEvent event) {
         commandData.command().onExecute(sender, event);
-    }
-
-    private boolean memberHasAccess(RestrictableCommand command, SlashCommandInteractionEvent event, Member member) {
-        if (command.admin() && member.getRoles().stream().anyMatch(role -> role.getIdLong() == 914245973759393822L)) { // todo DONT DO STATIC ROLE role
-            event.reply("no permission dud :|").queue();
-            return false;
-        }
-        return true;
     }
 }
