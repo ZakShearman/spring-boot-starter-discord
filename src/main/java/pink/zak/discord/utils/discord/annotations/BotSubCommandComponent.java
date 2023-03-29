@@ -18,6 +18,4 @@ public @interface BotSubCommandComponent {
     String subCommandId();
 
     String subCommandGroupId() default "";
-
-    boolean admin();
 }

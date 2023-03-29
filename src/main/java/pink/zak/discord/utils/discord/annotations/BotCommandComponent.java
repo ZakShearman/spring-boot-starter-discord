@@ -14,6 +14,4 @@ import java.lang.annotation.Target;
 public @interface BotCommandComponent {
 
     @NotNull String name();
-
-    boolean admin();
 }

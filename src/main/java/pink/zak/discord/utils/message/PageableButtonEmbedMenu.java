@@ -1,10 +1,14 @@
 package pink.zak.discord.utils.message;
 
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.GenericCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction;
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import pink.zak.discord.utils.BotConstants;
 import pink.zak.discord.utils.listener.ButtonRegistry;
@@ -16,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public abstract class PageableButtonEmbedMenu extends PageableMenu {
-    private final ScheduledExecutorService scheduler;
+    private final @Nullable ScheduledExecutorService scheduler;
     private final ButtonRegistry buttonRegistry;
 
     private ScheduledFuture<?> scheduledFuture;
@@ -24,21 +28,45 @@ public abstract class PageableButtonEmbedMenu extends PageableMenu {
     private Button forwardButton;
     private Button backButton;
 
-    protected PageableButtonEmbedMenu(ScheduledExecutorService scheduler, ButtonRegistry buttonRegistry) {
+    private InteractionHook interactionHook;
+
+    protected PageableButtonEmbedMenu(@Nullable ScheduledExecutorService scheduler, ButtonRegistry buttonRegistry) {
         this.scheduler = scheduler;
         this.buttonRegistry = buttonRegistry;
     }
 
-    public void sendInitialMessage(SlashCommandInteractionEvent event, boolean ephemeral) {
+    public void editInitialInteraction(InteractionHook interactionHook) {
         MessageEmbed embed = this.createPage(super.currentPage.get());
 
-        if (super.maxPage > 1) {
-            this.backButton = Button.primary(UUID.randomUUID().toString(), BotConstants.BACK_EMOJI).asDisabled();
-            this.forwardButton = Button.primary(UUID.randomUUID().toString(), BotConstants.FORWARD_EMOJI);
+        this.backButton = Button.primary(UUID.randomUUID().toString(), BotConstants.BACK_EMOJI).asDisabled();
+        this.forwardButton = Button.primary(UUID.randomUUID().toString(), BotConstants.FORWARD_EMOJI);
 
-            this.buttonRegistry.registerButton(this.backButton, this::previousPage)
-                    .registerButton(this.forwardButton, this::nextPage);
+        this.buttonRegistry.registerButton(this.backButton, this::previousPage)
+                .registerButton(this.forwardButton, this::nextPage);
+
+        WebhookMessageEditAction<Message> replyAction = interactionHook.editOriginal("")
+                .setEmbeds(embed);
+
+        if (this.forwardButton != null) {
+            replyAction.setActionRow(this.backButton, this.forwardButton);
         }
+
+        if (super.maxPage > 1)
+            this.scheduleDeletion();
+
+        replyAction.queue();
+
+        this.interactionHook = interactionHook;
+    }
+
+    public void sendInitialMessage(GenericCommandInteractionEvent event, boolean ephemeral) {
+        MessageEmbed embed = this.createPage(super.currentPage.get());
+
+        this.backButton = Button.primary(UUID.randomUUID().toString(), BotConstants.BACK_EMOJI).asDisabled();
+        this.forwardButton = Button.primary(UUID.randomUUID().toString(), BotConstants.FORWARD_EMOJI);
+
+        this.buttonRegistry.registerButton(this.backButton, this::previousPage)
+                .registerButton(this.forwardButton, this::nextPage);
 
         ReplyCallbackAction replyAction = event.replyEmbeds(embed)
                 .setEphemeral(ephemeral);
@@ -51,6 +79,8 @@ public abstract class PageableButtonEmbedMenu extends PageableMenu {
             this.scheduleDeletion();
 
         replyAction.queue();
+
+        this.interactionHook = event.getHook();
     }
 
     public abstract MessageEmbed createPage(int page);
@@ -71,6 +101,20 @@ public abstract class PageableButtonEmbedMenu extends PageableMenu {
             this.drawPage(this.currentPage.get(), event);
     }
 
+    @Override
+    public void drawPage(int page) {
+        if (page > this.maxPage) {
+            return;
+        }
+        MessageEmbed embed = this.createPage(page);
+
+        if (this.maxPage > 1) this.updateButtonStates(page);
+
+        this.interactionHook.editOriginalEmbeds(embed)
+                .setActionRow(this.backButton, this.forwardButton)
+                .queue();
+    }
+
     public void drawPage(int page, ButtonInteractionEvent event) {
         if (page > this.maxPage) {
             return;
@@ -84,19 +128,14 @@ public abstract class PageableButtonEmbedMenu extends PageableMenu {
                 .queue();
     }
 
-    @Override
-    public void drawPage(int page) {
-
-    }
-
     public void scheduleDeletion() {
         if (this.scheduledFuture != null) {
             this.scheduledFuture.cancel(false);
         }
-        this.scheduledFuture = this.scheduler.schedule(() -> this.buttonRegistry.unregisterButtons(this.forwardButton, this.backButton), 1, TimeUnit.MINUTES);
+        this.scheduledFuture = this.scheduler.schedule(() -> this.buttonRegistry.unregisterButtons(this.forwardButton, this.backButton), 1, TimeUnit.HOURS);
     }
 
-    private void updateButtonStates(int page) {
+    protected void updateButtonStates(int page) {
         if (page == 1) { // If page is 1, lock back button, unlock other
             if (!this.backButton.isDisabled()) this.backButton = this.backButton.asDisabled();
             if (this.forwardButton.isDisabled()) this.forwardButton = this.forwardButton.asEnabled();

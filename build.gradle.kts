@@ -2,8 +2,8 @@ plugins {
     java
     `maven-publish`
 
-    id("io.freefair.lombok") version "6.5.0.3"
-    id("io.spring.dependency-management") version "1.0.12.RELEASE"
+    id("io.freefair.lombok") version "8.0.1"
+    id("io.spring.dependency-management") version "1.1.0"
 }
 
 group = "pink.zak.discord.utils"
@@ -14,12 +14,12 @@ repositories {
 }
 
 dependencies {
-    implementation("net.dv8tion:JDA:5.0.0-alpha.16")
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("net.dv8tion:JDA:5.0.0-beta.6")
+    implementation("com.google.code.gson:gson:2.10.1")
 
-    compileOnly("org.springframework.boot:spring-boot-starter:2.7.1")
+    compileOnly("org.springframework.boot:spring-boot-starter:3.0.5")
 
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:2.7.1")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:3.0.4")
 }
 
 java {
@@ -36,7 +36,7 @@ publishing {
         create<MavenPublication>("maven") { // Only used for local publishing so same as JitPack
             groupId = "com.github.ZakShearman"
             artifactId = "spring-boot-starter-discord"
-            version = "1.0"
+            version = "local"
 
             from(components["java"])
         }
