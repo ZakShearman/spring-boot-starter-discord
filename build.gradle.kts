@@ -17,9 +17,9 @@ dependencies {
     implementation("net.dv8tion:JDA:5.0.0-beta.6")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    compileOnly("org.springframework.boot:spring-boot-starter:3.0.5")
+    compileOnly("org.springframework.boot:spring-boot-starter:3.1.0")
 
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:3.0.4")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:3.1.0")
 }
 
 java {
