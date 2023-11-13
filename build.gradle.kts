@@ -3,7 +3,7 @@ plugins {
     `maven-publish`
 
     id("io.freefair.lombok") version "8.0.1"
-    id("io.spring.dependency-management") version "1.1.0"
+    id("io.spring.dependency-management") version "1.1.4"
 }
 
 group = "pink.zak.discord.utils"
