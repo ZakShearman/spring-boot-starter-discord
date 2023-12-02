@@ -1,9 +1,11 @@
+import org.gradle.api.JavaVersion.VERSION_21
+
 plugins {
     java
     `maven-publish`
 
-    id("io.freefair.lombok") version "8.0.1"
-    id("io.spring.dependency-management") version "1.1.0"
+    id("io.freefair.lombok") version "8.4"
+    id("io.spring.dependency-management") version "1.1.4"
 }
 
 group = "pink.zak.discord.utils"
@@ -14,17 +16,17 @@ repositories {
 }
 
 dependencies {
-    implementation("net.dv8tion:JDA:5.0.0-beta.9")
+    implementation("net.dv8tion:JDA:5.0.0-beta.18")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    compileOnly("org.springframework.boot:spring-boot-starter:3.1.0")
+    compileOnly("org.springframework.boot:spring-boot-starter:3.2.0")
 
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:3.1.0")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:3.2.0")
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = VERSION_21
+    targetCompatibility = VERSION_21
 }
 
 tasks.getByName<Test>("test") {
