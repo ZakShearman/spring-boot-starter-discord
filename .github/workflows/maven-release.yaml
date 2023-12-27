@@ -1,0 +1,14 @@
+name: "Publish to release repo"
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "emortalmc/actions/java/publish-release@main"
+        with:
+          maven-username: "${{ secrets.MAVEN_USERNAME }}"
+          maven-password: "${{ secrets.MAVEN_SECRET }}"
