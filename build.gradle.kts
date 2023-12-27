@@ -34,11 +34,33 @@ tasks.getByName<Test>("test") {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "development"
+            url = uri("https://repo.emortal.dev/snapshots")
+            credentials {
+                username = System.getenv("MAVEN_USERNAME")
+                password = System.getenv("MAVEN_SECRET")
+            }
+        }
+        maven {
+            name = "release"
+            url = uri("https://repo.emortal.dev/releases")
+            credentials {
+                username = System.getenv("MAVEN_USERNAME")
+                password = System.getenv("MAVEN_SECRET")
+            }
+        }
+    }
+
     publications {
-        create<MavenPublication>("maven") { // Only used for local publishing so same as JitPack
-            groupId = "com.github.ZakShearman"
+        create<MavenPublication>("maven") {
+            groupId = "pink.zak.discord.utils"
             artifactId = "spring-boot-starter-discord"
-            version = "local"
+
+            val commitHash = System.getenv("COMMIT_HASH_SHORT")
+            val releaseVersion = System.getenv("RELEASE_VERSION")
+            version = commitHash ?: releaseVersion ?: "local"
 
             from(components["java"])
         }
