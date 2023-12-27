@@ -100,6 +100,11 @@ public class DiscordCommandBackend {
         Set<CommandData> createdData = this.commandsByName.values().stream().map(commandData -> commandData.command().createCommandData()).collect(Collectors.toSet());
         LOGGER.info("Created data {}", createdData);
 
+        if (createdData.isEmpty()) {
+            LOGGER.warn("No commands were created, this is likely due to no commands being registered");
+            return List.of();
+        }
+
         List<Command> createdCommands;
         if (guild == null) createdCommands = this.jda.updateCommands().addCommands(createdData).complete();
         else createdCommands = guild.updateCommands().addCommands(createdData).complete();

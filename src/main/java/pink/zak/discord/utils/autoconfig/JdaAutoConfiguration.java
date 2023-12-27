@@ -3,10 +3,13 @@ package pink.zak.discord.utils.autoconfig;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import pink.zak.discord.utils.configuration.JdaConfiguration;
@@ -40,5 +43,12 @@ public class JdaAutoConfiguration {
                 .build()
                 .awaitReady();
 
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty("spring.discord.guild-id")
+    public Guild guild(@NotNull JDA jda) {
+        return jda.getGuildById(jdaConfiguration.getGuildId());
     }
 }
