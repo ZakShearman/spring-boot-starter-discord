@@ -17,7 +17,7 @@ repositories {
 
 dependencies {
     implementation("net.dv8tion:JDA:5.0.0-beta.18")
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.14.0")
 
     compileOnly("org.springframework.boot:spring-boot-starter:3.2.0")
 
